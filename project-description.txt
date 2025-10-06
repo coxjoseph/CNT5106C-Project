@@ -1,0 +1,61 @@
+Protocol:
+   - each peer sends handshake:
+   HEADER (16B): 50 32 50 46 49 4C 45 53 48 41 52 49 4E 47 50 52 4F
+   ZERO (10B)  : 00 00 00 00 00 00 00 00 00 00
+   PEERID (4B, int)
+
+   - each peer can then send messages:
+   LENGTH (4B): in bytes, exclude length field
+   TYPE (1B): see table below
+   PAYLOAD (LEN - 1B)
+
+types of messages can be choke, unchoke, interested, not interested, have, bitfield, request, piece
+
+00. choke: no payload
+01. unchoke: no payload
+02. interested: no payload
+03. not interested: no payload
+04. have: 4-byte index
+05. bitfield: only sent as first message after handshake. each bit represents if peer has a corresponding piece
+
+First byte corresponds to piece indices 0-7 (Big Endian: 10000000 indicates possession of piece 0.)
+Second byte corresponds to piece 8-15, etc
+
+06. request: 4 byte piece index field.
+07. piece: 4-byte piece index field followed by the content of the piece
+
+- procedure example (A to B, but recall symmetric so also B to A):
+1. A makes TCP connection to B
+2. A sends a handshake to B
+3. A receives a handshake from B and checks (1) handshake header, (2) peer B is expected peer ID
+4. A sends a bitfield message to know which file pieces it has if A has any pieces
+5. A may receive a bitfield message from B (if B has any pieces).
+6. If B has any pieces that A does not have, A sends "interested". If not, A sends "uninterested"
+
+- choke/unchoke: each peer uploads only to k (runtime provided) "preferred" neighbors and 1
+"optimistically unchoked" neighbor. These neighbors are "unchoked" and all others are "choked."
+ The choking procedure is:
+1. Every p (runtime provided) seconds, A calculates the downloading rate from each of its neighbors during
+the previous interval. (For clarity, the rate of data downloaded from each neighbor not uploaded to them)
+2. Among interested neighbors, A picks the top k neighbors by downloading rate (ties randomly broken). If A has
+a complete file, it selects randomly between all interested neighbors instead.
+3. These neighbors are sent "unchoke" with the expectation to receive a "request" message back. Unchoked
+neigbors do not need another unchoke message. All other neighbors are sent a choke message unless already choked.
+4. Every m (runtime provided) seconds, A selects a random, choked, interested neighbor and sends an unchoke
+message, expecting a request message in response.
+Note: a neighbor unchoked in this way can become a preferred neighbor, and that's allowed. e.g. A unchokes
+C optimistically, and A becomes C's preffered neighbor. C then sends data to A fast enough to become A's
+preferred neighbor. Then we only upload to k (not k+1) for this interval and reselect at the next m
+
+
+- interested/not interested: if a neighbor has an interesting piece, a peer sends them an interested message. this
+is determined each time a peer receives a bitfield or have message - if A sees B has a piece it doesn't, A sends
+"interested." Otherwise, it sends "not interested." Each peer maintains updated bitfields for all neighbors, and
+sends "not interested" messages to neighbors as necessary upon receiving a full piece.
+
+- request/piece: When a neighbor sends an unchoke message, peer sends a "request" message with a random index of a
+piece it does not have, the neighbor does have, and it has not requested already from another neighbor. Upon receipt
+of a request message, the peer may respond with a piece message containing the piece requested. It is possible to
+send a request and not receive a piece (e.g. when A is choked by B before B responds to A). Once the piece is fully
+downloaded, the peer sends out another request message to the neighbor, and a "have" message to all its neighbors.
+
