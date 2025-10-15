@@ -2,8 +2,8 @@ import socket
 
 
 class Host:
-    def __init__(self, name, ip_address, port_number, bitfield,
-                 num_preferred_peers, unchoke_inteval, optimistic_unchoke_interval, peer_connections=[],
+    def __init__(self, name, ip_address, port_number, bitfield, max_connections,
+                 num_preferred_peers, unchoke_inteval, optimistic_unchoke_interval,
                  verbose=False, log_file="", time_format="%m/%d/%Y :: %H:%M:%S.%f"):
 
         self.name = name
@@ -16,6 +16,7 @@ class Host:
 
         self.num_connected_peers = 0
 
+        self.max_connections = max_connections
         self.num_preferred_peers = num_preferred_peers  # k, determined by config
         self.unchoke_interval = unchoke_inteval  # p, determined by config
         self.optimistic_unchoke_interval = optimistic_unchoke_interval  # m, determined by config
@@ -32,6 +33,8 @@ class Host:
         # fields are:
         #       - ip_address: string, peer ip address, used as combo with port_number as key
         #       - port_number: string, peer process port number, used as combo with ip_address as key
+        #       - connection_socket: socket returned by s.accept() when forming connection
+        #       - connection_string: address returned by s.accept() when forming connection
         #       - peer_number: used by the bitfield to determine what row of the bitfield corresponds to the peer
         #       - peer_name: string, determined by config file, useful for debugging
         #       - unchoked: boolean, true if currently sending data to peer
@@ -52,21 +55,24 @@ class Host:
 
         # use `with Host.socket as s:` for all connection calls
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # will need to bind socket before use
+        self.socket.bind((self.ip_address, self.port_number))
 
-        # need to connect to all peers established beforehand, passed in peer_connections parameter
-        # for peer in peer_connections:
-
-    def listen_for_connection(self, timeout) -> bool:
-        old_timeout = socket.timeout
-        socket.settimeout(timeout)
-
-        connection_formed = False
+    def connect(self, address:tuple, timeout:float=500) -> bool:
         with self.socket as s:
-            s.bind((self.ip_address, self.port))
-            s.listen()
+            old_timeout = s.timeout
+            s.settimeout(timeout)
 
-        # restore the old timeout
-        socket.settimeout(old_timeout)
+            try:
+                s.connect(address)
+                connection_formed = True
+
+                # add connection details
+
+            except TimeoutError:
+                print(f"Failed to connect to: {address}")
+                connection_formed = False
+
+            s.settimeout(old_timeout)
 
         return connection_formed
+
