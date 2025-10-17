@@ -1,5 +1,5 @@
 import struct
-from .constants import HEADER, ZEROS,
+from .constants import HEADER, ZEROS
 
 
 class Handshake:
