@@ -1,5 +1,5 @@
 import struct
-from tying import Optional
+from typing import Optional
 from .constants import MessageType, MAX_FRAME
 
 
