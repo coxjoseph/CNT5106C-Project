@@ -1,6 +1,6 @@
 from enum import IntEnum
 
-HEADER = b'P2PFILESHARINGPRO'
+HEADER = b'P2PFILESHARINGPROJ'
 ZEROS = b'\x00' * 10
 MAX_FRAME = 10 * 1024 * 1024
 
