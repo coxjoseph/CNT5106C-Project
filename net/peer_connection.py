@@ -1,8 +1,6 @@
 import asyncio
-import struct
 from typing import Optional
-
-from .constants import MessageType, HEADER, ZEROS
+from .constants import MessageType
 from .handshake import Handshake
 from .codec import (
     encode_frame, decode_one,
@@ -38,7 +36,7 @@ class PeerConnection(WireCommands):
         self.send_handshake(self._local_id)
         # read recieved hanshaek
         try:
-            remote = await asyncio.wait_for(self._r.readexactly(30), timeout=self._hshake_to)
+            remote = await asyncio.wait_for(self._r.readexactly(32), timeout=self._hshake_to)
         except Exception as e:
             self._safe_disconnect()
             return
