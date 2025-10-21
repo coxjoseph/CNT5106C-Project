@@ -94,7 +94,7 @@ class PeerConnection(WireCommands):
         except Exception:
             pass
 
-    # --implementation of protocol ----
+    # -- implementation of protocol --
     def send_handshake(self, peer_id: int) -> None:
         if self._closed: return
         try:
