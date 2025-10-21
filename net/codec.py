@@ -43,4 +43,4 @@ def dec_request(payload: bytes) -> int:
 def enc_piece(index: int, data: bytes) -> bytes: return struct.pack('>I', index) + data
 def dec_piece(payload: bytes) -> tuple[int, bytes]:
     index = struct.unpack('>I', payload[:4])[0]
-    return index, payload[:4]
+    return index, payload[4:]
