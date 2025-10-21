@@ -32,11 +32,10 @@ class PeerConnection(WireCommands):
         self._closed = False
 
     async def start(self) -> None:
-        # send handshake
         self.send_handshake(self._local_id)
-        # read recieved hanshaek
+
         try:
-            remote = await asyncio.wait_for(self._r.readexactly(32), timeout=self._hshake_to)
+            remote = await asyncio.wait_for(self._r.readexactly(32), timeout=self._hshake_to)  # expect 32b handshake
         except Exception as e:
             self._safe_disconnect()
             return
@@ -48,7 +47,7 @@ class PeerConnection(WireCommands):
             self._safe_disconnect()
             return
 
-        # run whatever happens on hanshake
+        # run whatever happens on handshake
         try:
             self._cb.on_handshake(hs.peer_id)
         except Exception:
