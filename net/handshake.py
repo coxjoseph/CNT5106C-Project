@@ -20,6 +20,8 @@ class Handshake:
         if buf[18:28] != ZEROS:
             raise ValueError('Bad handshake padding :(')
 
-        (peer_id,) = struct.unpack('>I', buf[28:32])
+        # Unpack last 4 bytes if the handshake is ok
+        (peer_id,) = struct.unpack('>I', buf[28:])
+        print(peer_id)
         return Handshake(peer_id)
 

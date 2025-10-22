@@ -1,8 +1,6 @@
 import asyncio
-import struct
 from typing import Optional
-
-from .constants import MessageType, HEADER, ZEROS
+from .constants import MessageType
 from .handshake import Handshake
 from .codec import (
     encode_frame, decode_one,
@@ -27,7 +25,6 @@ class PeerConnection(WireCommands):
         self._w = writer
         self._cb = callbacks
         self._local_id = int(local_peer_id)
-        self.connected_peer_id = None
         self._hshake_to = handshake_timeout
         self._idle_to = idle_timeout
         self._read_task: Optional[asyncio.Task] = None
@@ -35,11 +32,10 @@ class PeerConnection(WireCommands):
         self._closed = False
 
     async def start(self) -> None:
-        # send handshake
         self.send_handshake(self._local_id)
-        # read received handshake
+
         try:
-            remote = await asyncio.wait_for(self._r.readexactly(32), timeout=self._hshake_to)
+            remote = await asyncio.wait_for(self._r.readexactly(32), timeout=self._hshake_to)  # expect 32b handshake
         except Exception as e:
             self._safe_disconnect()
             return
@@ -47,7 +43,6 @@ class PeerConnection(WireCommands):
         # decode, break
         try:
             hs = Handshake.decode(remote)
-            self.connected_peer_id = hs.peer_id
         except Exception:
             self._safe_disconnect()
             return
@@ -99,7 +94,7 @@ class PeerConnection(WireCommands):
         except Exception:
             pass
 
-    # --implementation of protocol ----
+    # -- implementation of protocol --
     def send_handshake(self, peer_id: int) -> None:
         if self._closed: return
         try:
