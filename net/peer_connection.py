@@ -25,6 +25,7 @@ class PeerConnection(WireCommands):
         self._w = writer
         self._cb = callbacks
         self._local_id = int(local_peer_id)
+        self.connected_peer_id = None
         self._hshake_to = handshake_timeout
         self._idle_to = idle_timeout
         self._read_task: Optional[asyncio.Task] = None
@@ -43,6 +44,7 @@ class PeerConnection(WireCommands):
         # decode, break
         try:
             hs = Handshake.decode(remote)
+            self.connected_peer_id = hs.peer_id
         except Exception:
             self._safe_disconnect()
             return
