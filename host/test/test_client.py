@@ -1,9 +1,9 @@
 from time import sleep
-from host.host import Host
+from host.peer import Peer
 
 def main():
     iters = 100
-    client_test = Host("1002", "localhost", 22222,
+    client_test = Peer("1002", "localhost", 22222,
                        0, 1, 1, 1, 1)
 
     while not client_test.connect(("localhost", 12345), "1001") and iters:
