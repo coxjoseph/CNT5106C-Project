@@ -1,12 +1,12 @@
 import socket
 
 
-class Host:
-    def __init__(self, name, ip_address, listening_port_number, bitfield, max_connections,
+class Peer:
+    def __init__(self, id_number, ip_address, listening_port_number, bitfield, max_connections,
                  num_preferred_peers, unchoke_interval, optimistic_unchoke_interval,
                  verbose=False, log_file="", time_format="%m/%d/%Y :: %H:%M:%S.%f"):
 
-        self.name = name
+        self.id_number = id_number
         self.ip_address = ip_address
         self.listening_port_number = listening_port_number
         self.bitfield = bitfield  # array ?
