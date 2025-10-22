@@ -13,13 +13,13 @@ class Handshake:
 
     @staticmethod
     def decode(buf: bytes) -> 'Handshake':
-        if len(buf) < 16 + 10 + 4:
+        if len(buf) < 18 + 10 + 4:
             raise ValueError('Handshake too smol :(')
-        if buf[:16] != HEADER:
+        if buf[:18] != HEADER:
             raise ValueError('Bad handshake header :(')
-        if buf[16:26] != ZEROS:
+        if buf[18:28] != ZEROS:
             raise ValueError('Bad handshake padding :(')
 
-        (peer_id,) = struct.unpack('>I', buf[26:30])
+        (peer_id,) = struct.unpack('>I', buf[28:32])
         return Handshake(peer_id)
 
