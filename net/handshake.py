@@ -22,6 +22,5 @@ class Handshake:
 
         # Unpack last 4 bytes if the handshake is ok
         (peer_id,) = struct.unpack('>I', buf[28:])
-        print(peer_id)
         return Handshake(peer_id)
 

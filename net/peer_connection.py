@@ -11,15 +11,16 @@ from .codec import (
 
 from logic_stubs.callbacks import WireCommands, LogicCallbacks
 
+
 class PeerConnection(WireCommands):
     def __init__(
-        self,
-        reader: asyncio.StreamReader,
-        writer: asyncio.StreamWriter,
-        callbacks: LogicCallbacks,
-        local_peer_id: int,
-        handshake_timeout: float = 5.0,
-        idle_timeout: Optional[float] = None,
+            self,
+            reader: asyncio.StreamReader,
+            writer: asyncio.StreamWriter,
+            callbacks: LogicCallbacks,
+            local_peer_id: int,
+            handshake_timeout: float = 5.0,
+            idle_timeout: Optional[float] = None,
     ):
         self._r = reader
         self._w = writer
@@ -161,4 +162,3 @@ class PeerConnection(WireCommands):
             self._cb.on_disconnect()
         except Exception:
             pass
-

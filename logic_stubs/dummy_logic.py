@@ -1,3 +1,4 @@
+
 """
 Small scripted "logic" section so that network code can be demoed/tested without
 implementation of logic
@@ -11,6 +12,7 @@ implementation of logic
 
 from typing import Optional
 from .callbacks import LogicCallbacks, WireCommands
+
 
 class DummyLogic(LogicCallbacks):
     def __init__(self, role: str):

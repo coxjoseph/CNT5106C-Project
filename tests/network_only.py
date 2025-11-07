@@ -10,11 +10,13 @@ async def run_server(host: str, port: int, peer_id: int):
         conn = PeerConnection(reader, writer, callbacks=logic, local_peer_id=peer_id)
         logic.set_wire(conn)
         await conn.start()
+
     server = await asyncio.start_server(handler, host, port)
     addrs = ", ".join(str(sock.getsockname()) for sock in server.sockets)
     print(f"[server] listening on {addrs}")
     async with server:
         await server.serve_forever()
+
 
 async def run_client(host: str, port: int, peer_id: int):
     reader, writer = await asyncio.open_connection(host, port)
@@ -37,6 +39,7 @@ def main():
         asyncio.run(run_server(args.host, args.port, args.peer_id))
     else:
         asyncio.run(run_client(args.host, args.port, args.peer_id))
+
 
 if __name__ == "__main__":
     main()
