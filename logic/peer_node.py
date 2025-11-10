@@ -1,4 +1,5 @@
 import asyncio
+import errno
 from typing import Dict, Optional, Iterable
 from .bitfield import Bitfield
 from .piece_store import PieceStore
@@ -6,6 +7,10 @@ from .request_manager import RequestManager
 from .choking_manager import ChokingManager
 from .peer_logic import PeerLogic
 from net.protocol_logger import TextEventLogger
+import erro
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class NeighborState:
@@ -17,10 +22,10 @@ class NeighborState:
 
 class PeerNode:
     """
-    Owns local state and policy:
+    Controls local state and policy:
       - local bitfield & PieceStore
       - registry of neighbors
-      - request scheduling (one outstanding per neighbor; random choice)
+      - request scheduling
       - choke/unchoke selection
     """
 
@@ -53,6 +58,10 @@ class PeerNode:
     async def wait_until_all_complete(self):
         await self._all_done.wait()
 
+    def mark_peer_complete(self, peer_id: int) -> None:
+        self._complete_peers.add(peer_id)
+        self._check_global_completion()
+
     def _check_global_completion(self):
         if self._complete_peers == self.all_peers:
             self._all_done.set()
@@ -71,14 +80,15 @@ class PeerNode:
             self._complete_peers.add(logic.peer_id)
             self._check_global_completion()
 
-        if not logic._sent_bitfield and self.local_bits.count() > 0 and logic.wire:
+        if not logic.sent_bitfield and self.local_bits.count() > 0 and logic.wire:
             logic.wire.send_bitfield(self.local_bits.to_bytes())
             logic._sent_bitfield = True
         # Immediately compute interest toward them
         self.recompute_interest(logic)
 
     def on_disconnect(self, logic: PeerLogic) -> None:
-        if logic.peer_id is None: return
+        if logic.peer_id is None:
+            return
         # clear any inflight piece assigned to this neighbor
         self.requests.clear_inflight_for_peer(logic.peer_id)
         self._registry.pop(logic.peer_id, None)
@@ -93,7 +103,8 @@ class PeerNode:
     # ------- interest / request -------
     def recompute_interest(self, logic: PeerLogic) -> None:
         """Send interested/not interested based on whether neighbor has something we need."""
-        if logic.wire is None or logic.peer_id is None: return
+        if logic.wire is None or logic.peer_id is None:
+            return
         missing = self.local_bits.missing_from(logic.their_bits)
         want = bool(missing)
         # Track our interest flag on the logic side using the wire (no need to store duplicate)
@@ -104,8 +115,10 @@ class PeerNode:
             logic.wire.send_not_interested()
 
     def maybe_request_next(self, logic: PeerLogic) -> None:
-        if logic.wire is None or logic.peer_id is None: return
-        if logic.they_choke_us: return
+        if logic.wire is None or logic.peer_id is None:
+            return
+        if logic.they_choke_us:
+            return
         idx = self.requests.choose_for_neighbor(logic.peer_id, logic.their_bits, self.local_bits)
         if idx is not None:
             # Enforce correct size at PieceStore layer; the sender should send the right size
@@ -136,8 +149,14 @@ class PeerNode:
             self._complete_peers.add(self.self_id)
             try:
                 self.store.reconstruct_full_file(self.file_name)
-            except Exception:
-                pass
+            except FileExistsError:
+                logger.info(f'File {self.file_name} already exists - skipping')
+
+            except OSError as e:
+                if e.errno in (errno.EEXIST, errno.ENOTDIR):
+                    logger.warning(f'Failed to reconstruct {self.file_name}: {e}')
+            else:
+                raise
 
             self._check_global_completion()
 

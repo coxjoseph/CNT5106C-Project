@@ -2,11 +2,13 @@ import random
 from typing import Dict, Optional, Set
 from .bitfield import Bitfield
 
+
 class RequestManager:
     """
     Enforces: one outstanding request per neighbor, no duplicate in-flight piece
     across neighbors. Random piece selection (per spec).
     """
+
     def __init__(self, total_pieces: int):
         self.total = total_pieces
         self.inflight_piece_by_peer: Dict[int, int] = {}  # peer_id -> piece

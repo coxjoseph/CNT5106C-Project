@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-
-import argparse, asyncio, os
+import argparse
+import asyncio
+import os
 from pathlib import Path
 
 from net.connector import Connector
@@ -27,7 +28,7 @@ async def main():
         src = work_dir / common.file_name
         if not src.exists():
             raise FileNotFoundError(f"Seed peer {args.peer_id} missing source file: {src}")
-        # Slice file into piece files
+
         already = sum(1 for _ in data_dir.glob("piece_*.bin"))
         if already != common.total_pieces:
             await slice_into_pieces(
@@ -53,17 +54,17 @@ async def main():
     )
 
     connector = Connector(
-        me.host,  # bind host from PeerInfo row
-        me.port,  # bind port from PeerInfo row
+        me.host,
+        me.port,
         local_peer_id=args.peer_id,
         logic_factory=node.make_callbacks,
     )
     node.connector = connector
 
-    asyncio.create_task(connector.serve())
+    _ = asyncio.create_task(connector.serve())
 
     for row in peers.earlier_peers(args.peer_id):
-        asyncio.create_task(connector.connect_with_retry(row.host, row.port))
+        _ = asyncio.create_task(connector.connect_with_retry(row.host, row.port))
 
     choke_task = asyncio.create_task(node.run_choking_loops())
     try:

@@ -22,8 +22,8 @@ class TextEventLogger:
         with self.log_path.open("a", encoding="utf-8") as f:
             f.write(f"{_ts()} {line}\n")
 
-
     # connection events
+
     def makes_connection_to(self, remote_id: int) -> None:
         self._w(f"Peer [{self.self_id}] makes a connection to Peer [{remote_id}].")
 

@@ -1,25 +1,25 @@
 import random
-from typing import Dict, List
+
 
 class RateTracker:
-    """Track bytes downloaded from each neighbor in the last interval."""
     def __init__(self):
-        self._bytes: Dict[int, int] = {}
+        self._bytes: dict[int, int] = {}
 
-    def add_download(self, peer_id: int, nbytes: int) -> None:
-        self._bytes[peer_id] = self._bytes.get(peer_id, 0) + nbytes
+    def add_download(self, peer_id: int, n_bytes: int) -> None:
+        self._bytes[peer_id] = self._bytes.get(peer_id, 0) + n_bytes
 
-    def snapshot_and_reset(self) -> Dict[int, int]:
+    def snapshot_and_reset(self) -> dict[int, int]:
         snap = dict(self._bytes)
         self._bytes.clear()
         return snap
+
 
 class ChokingManager:
     def __init__(self, k_preferred: int):
         self.k = k_preferred
         self.rates = RateTracker()
 
-    def select_preferred(self, interested_peer_ids: List[int], have_complete_file: bool) -> List[int]:
+    def select_preferred(self, interested_peer_ids: List[int], have_complete_file: bool) -> list[int]:
         if not interested_peer_ids:
             return []
         if have_complete_file:
@@ -38,5 +38,6 @@ class ChokingManager:
             i = j
         return ordered[: self.k]
 
-    def pick_optimistic(self, choked_interested_ids: List[int]) -> int | None:
+    @staticmethod
+    def pick_optimistic(choked_interested_ids: List[int]) -> int | None:
         return random.choice(choked_interested_ids) if choked_interested_ids else None

@@ -7,10 +7,7 @@ from net.protocol_logger import TextEventLogger
 class PeerLogic(LogicCallbacks):
     """
     Per-connection logic adapter.
-    - Holds a reference to the process-wide PeerNode (node) so it can use local bitfield/store.
-    - Keeps per-neighbor state (their bitfield, choke/interest flags).
     """
-
     def __init__(self, node: "PeerNode"):
         self.node = node
         self.wire: Optional[WireCommands] = None
@@ -72,32 +69,31 @@ class PeerLogic(LogicCallbacks):
 
     def on_have(self, index: int):
         self.their_bits.set(index, True)
-        have_cnt = self.their_bits.count()
         if self.peer_id is not None:
             self._logger.received_have(self.peer_id, index)
         if self.their_bits.count() == self.node.total_pieces and self.peer_id is not None:
-            self.node._complete_peers.add(self.peer_id)
-            self.node._check_global_completion()
+            self.node.mark_peer_complete(self.peer_id)
         self.node.recompute_interest(self)
 
     def on_bitfield(self, bits: bytes):
         self.their_bits = Bitfield.from_bytes(self.node.total_pieces, bits)
         if self.their_bits.count() == self.node.total_pieces and self.peer_id is not None:
-            self.node._complete_peers.add(self.peer_id)
-            self.node._check_global_completion()
+            self.node.mark_peer_complete(self.peer_id)
         self.node.recompute_interest(self)
 
     def on_request(self, index: int):
         # Serve only if we are unchoking them and we have the piece
-        if self.peer_id is None or self.wire is None: return
-        if self.node.we_choke_them(self.peer_id): return
+        if self.peer_id is None or self.wire is None or self.node.we_choke_them(self.peer_id):
+            return
         if self.node.store.have(index):
             data = self.node.store.read_piece(index)
-            # Networking will enforce back-pressure
             self.wire.send_piece(index, data)
 
     def on_piece(self, index: int, data: bytes):
-        # Count toward rate (downloaded from this peer this interval)
         if self.peer_id is not None:
             self.node.choking.rates.add_download(self.peer_id, len(data))
         self.node.handle_piece(self, index, data)
+
+    @property
+    def sent_bitfield(self):
+        return self._sent_bitfield

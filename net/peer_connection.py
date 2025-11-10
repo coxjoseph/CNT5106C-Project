@@ -1,5 +1,6 @@
 import asyncio
 from typing import Optional
+import logging
 from .constants import MessageType
 from .handshake import Handshake
 from .codec import (
@@ -10,6 +11,8 @@ from .codec import (
 )
 
 from logic_stubs.callbacks import WireCommands, LogicCallbacks
+
+logger = logging.getLogger(__name__)
 
 
 class PeerConnection(WireCommands):
@@ -27,7 +30,7 @@ class PeerConnection(WireCommands):
         self._cb = callbacks
         self._local_id = int(local_peer_id)
         self.connected_peer_id = None
-        self._hshake_to = handshake_timeout
+        self._handshake_to = handshake_timeout
         self._idle_to = idle_timeout
         self._read_task: Optional[asyncio.Task] = None
         self._buf = bytearray()
@@ -37,8 +40,9 @@ class PeerConnection(WireCommands):
         self.send_handshake(self._local_id)
 
         try:
-            remote = await asyncio.wait_for(self._r.readexactly(32), timeout=self._hshake_to)  # expect 32b handshake
-        except Exception as e:
+            remote = await asyncio.wait_for(self._r.readexactly(32), timeout=self._handshake_to)  # expect 32b handshake
+        except (asyncio.IncompleteReadError, asyncio.TimeoutError, ConnectionError, OSError) as e:
+            logger.warning(f'Handshake failed: {e}')
             self._safe_disconnect()
             return
 
@@ -46,32 +50,46 @@ class PeerConnection(WireCommands):
         try:
             hs = Handshake.decode(remote)
             self.connected_peer_id = hs.peer_id
-        except Exception:
+        except (ValueError, OSError) as e:
+            logger.warning(f'Failed to decode handshake: {e}')
             self._safe_disconnect()
             return
 
         # run whatever happens on handshake
         try:
             self._cb.on_handshake(hs.peer_id)
-        except Exception:
-            pass
+        except (AttributeError, RuntimeError, TypeError) as e:
+            logger.error(f"Error running handshake callback for peer {hs.peer_id}: {e}")
         self._read_task = asyncio.create_task(self._read_loop())
 
     async def _read_loop(self) -> None:
         try:
             while not self._closed:
-                chunk = await self._r.read(4096)
+                chunk = None
+                try:
+                    chunk = await self._r.read(4096)
+                except (asyncio.IncompleteReadError, asyncio.TimeoutError, ConnectionError, OSError) as e:
+                    logger.warning(f'Read error: {e}')
+
                 if not chunk:
                     break
                 self._buf.extend(chunk)
+
                 while True:
-                    res = decode_one(self._buf)
+                    res = None
+                    try:
+                        res = decode_one(self._buf)
+                    except ValueError as e:
+                        logger.warning(f'Failed to decode frame: {e}')
                     if res is None:
                         break
                     mtype, payload = res
-                    self._dispatch(mtype, payload)
-        except Exception:
-            pass
+                    try:
+                        self._dispatch(mtype, payload)
+                    except (ValueError, RuntimeErrorm, TypeError) as e:
+                        logger.warning(f'Error dispatching message: {e}')
+        except asyncio.CancelledError as e:
+            logger.debug(f'Read loop cancelled: {e}')
         finally:
             self._safe_disconnect()
 
@@ -99,7 +117,8 @@ class PeerConnection(WireCommands):
 
     # -- implementation of protocol --
     def send_handshake(self, peer_id: int) -> None:
-        if self._closed: return
+        if self._closed:
+            return
         try:
             self._w.write(Handshake(peer_id).encode())
         except Exception:
@@ -138,27 +157,38 @@ class PeerConnection(WireCommands):
 
     # helpers
     def _send_t(self, t: MessageType) -> None:
-        if self._closed: return
+        if self._closed:
+            return
         try:
             self._w.write(encode_frame(t))
-        except Exception:
+        except ValueError as e:
+            logger.error(f'Failed to encode frame for {t.name}: {e}')
+            self._safe_disconnect()
+        except (ConnectionError, OSError) as e:
+            logger.warning(f'Write error for {t.name}: {e}')
             self._safe_disconnect()
 
     def _send_tp(self, t: MessageType, p: bytes) -> None:
-        if self._closed: return
+        if self._closed:
+            return
         try:
             self._w.write(encode_frame(t, p))
-        except Exception:
+        except ValueError as e:
+            logger.error(f'Failed to encode frame for {t.name} with payload ({len(p)}B): {e}')
+            self._safe_disconnect()
+        except (ConnectionError, OSError) as e:
+            logger.warning(f'Write error for {t.name} with payload ({len(p)}B): {e}')
             self._safe_disconnect()
 
     def _safe_disconnect(self) -> None:
-        if self._closed: return
+        if self._closed:
+            return
         self._closed = True
         try:
             self._w.close()
-        except Exception:
-            pass
+        except OSError as e:
+            logger.warning(f'Error while closing writer: {e}')
         try:
             self._cb.on_disconnect()
-        except Exception:
-            pass
+        except (AttributeError, RuntimeError, TypeError) as e:
+            logger.debug(f'on_disconnect callback error: {e}')

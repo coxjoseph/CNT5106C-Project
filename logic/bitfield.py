@@ -1,13 +1,9 @@
 class Bitfield:
-    """
-    Big-endian within each byte:
-    byte0 => pieces 0..7 (bit7 = piece0, bit0 = piece7)
-    """
     def __init__(self, total_pieces: int, bits: bytes | None = None):
         self.n = int(total_pieces)
-        nbytes = (self.n + 7) // 8
-        self._b = bytearray(bits if bits is not None else b"\x00" * nbytes)
-        if len(self._b) != nbytes:
+        n_bytes = (self.n + 7) // 8
+        self._b = bytearray(bits if bits is not None else b"\x00" * n_bytes)
+        if len(self._b) != n_bytes:
             raise ValueError("bitfield length mismatch")
 
     @classmethod
@@ -29,18 +25,22 @@ class Bitfield:
         return bytes(self._b)
 
     def get(self, idx: int) -> bool:
-        if not (0 <= idx < self.n): return False
+        if not (0 <= idx < self.n):
+            return False
         byte = idx // 8
         off = idx % 8
         return bool(self._b[byte] & (1 << (7 - off)))
 
     def set(self, idx: int, val: bool) -> None:
-        if not (0 <= idx < self.n): return
+        if not (0 <= idx < self.n):
+            return
         byte = idx // 8
         off = idx % 8
         mask = (1 << (7 - off))
-        if val: self._b[byte] |= mask
-        else:   self._b[byte] &= ~mask
+        if val:
+            self._b[byte] |= mask
+        else:
+            self._b[byte] &= ~mask
 
     def count(self) -> int:
         return sum(bin(b).count("1") for b in self._b)
@@ -52,6 +52,7 @@ class Bitfield:
                 out.append(i)
         return out
 
+    # In case we need to print these:
     def __str__(self) -> str:
         bits = ''.join(f'{b:08b}' for b in self._b)
         return bits[:self.n]
@@ -59,4 +60,3 @@ class Bitfield:
     def summary(self) -> str:
         have = self.count()
         return f'{have}/{self.n} pieces'
-

@@ -80,8 +80,8 @@ class PeerInfoTable:
             parts = line.split()
             if len(parts) != 4:
                 raise ValueError(f"Malformed PeerInfo.cfg line: {raw}")
-            pid, host, port, hasf = parts
-            rows.append(PeerRow(int(pid), host, int(port), int(hasf)))
+            pid, host, port, has_file = parts
+            rows.append(PeerRow(int(pid), host, int(port), int(has_file)))
         if not rows:
             raise ValueError("PeerInfo.cfg has no peers")
         return cls(rows)

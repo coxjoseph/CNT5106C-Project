@@ -2,10 +2,10 @@ import os
 from .bitfield import Bitfield
 from pathlib import Path
 
+
 class PieceStore:
     """
-    Simple piece storage: each piece as its own file under data_dir/.
-    Enforces last-piece size at the logic layer (caller responsibility).
+    Stores each piece as its own file under data_dir/.
     """
 
     def __init__(self, total_pieces: int, piece_size: int, last_piece_size: int,
@@ -27,7 +27,8 @@ class PieceStore:
         return self.last_piece_size if index == self.total - 1 else self.piece_size
 
     def write_piece(self, index: int, data: bytes) -> bool:
-        if index < 0 or index >= self.total: return False
+        if index < 0 or index >= self.total:
+            return False
         exp = self.expected_size(index)
         if len(data) != exp:  # enforce piece boundary
             return False
