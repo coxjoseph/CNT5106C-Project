@@ -10,26 +10,26 @@ from util.config import CommonConfig, PeerInfoTable
 import contextlib
 
 
-async def main():
+async def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("peer_id", type=int)
+    ap.add_argument('peer_id', type=int)
     args = ap.parse_args()
 
-    common = CommonConfig.from_file("Common.cfg")
-    peers = PeerInfoTable.from_file("PeerInfo.cfg")
+    common = CommonConfig.from_file('Common.cfg')
+    peers = PeerInfoTable.from_file('PeerInfo.cfg')
     me = peers.get(args.peer_id)
 
-    work_dir = Path.cwd() / f"peer_{args.peer_id}"
-    data_dir = work_dir / "pieces"
+    work_dir = Path.cwd() / f'peer_{args.peer_id}'
+    data_dir = work_dir / 'pieces'
     data_dir.mkdir(parents=True, exist_ok=True)
 
     start_full = (me.has_file == 1)
     if start_full:
         src = work_dir / common.file_name
         if not src.exists():
-            raise FileNotFoundError(f"Seed peer {args.peer_id} missing source file: {src}")
+            raise FileNotFoundError(f'Seed peer {args.peer_id} missing source file: {src}')
 
-        already = sum(1 for _ in data_dir.glob("piece_*.bin"))
+        already = sum(1 for _ in data_dir.glob('piece_*.bin'))
         if already != common.total_pieces:
             await slice_into_pieces(
                 src,
@@ -79,17 +79,18 @@ async def main():
         await connector.close_all()
 
 
-async def slice_into_pieces(src_path: Path, out_dir: Path, piece_size: int, total_pieces: int, last_piece_size: int):
+async def slice_into_pieces(src_path: Path, out_dir: Path, piece_size: int, total_pieces: int,
+                            last_piece_size: int) -> None:
     data = src_path.read_bytes()
     offset = 0
     for i in range(total_pieces):
         size = last_piece_size if i == total_pieces - 1 else piece_size
         chunk = data[offset: offset + size]
         if len(chunk) != size:
-            raise ValueError(f"Source file too small for piece {i} (expected {size}, got {len(chunk)})")
-        (out_dir / f"piece_{i:06d}.bin").write_bytes(chunk)
+            raise ValueError(f'Source file too small for piece {i} (expected {size}, got {len(chunk)})')
+        (out_dir / f'piece_{i:06d}.bin').write_bytes(chunk)
         offset += size
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     asyncio.run(main())

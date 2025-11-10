@@ -1,6 +1,6 @@
 import asyncio
 import errno
-from typing import Dict, Optional, Iterable
+from typing import Optional, Iterable
 from .bitfield import Bitfield
 from .piece_store import PieceStore
 from .request_manager import RequestManager
@@ -21,19 +21,10 @@ class NeighborState:
 
 
 class PeerNode:
-    """
-    Controls local state and policy:
-      - local bitfield & PieceStore
-      - registry of neighbors
-      - request scheduling
-      - choke/unchoke selection
-    """
 
-    def __init__(self, total_pieces: int, piece_size: int, last_piece_size: int,
-                 data_dir: str, start_with_full_file: bool,
-                 k_preferred: int, preferred_interval_sec: int, optimistic_interval_sec: int, self_id: int,
-                 all_peer_ids: set[int],
-                 file_name: str):
+    def __init__(self, total_pieces: int, piece_size: int, last_piece_size: int, data_dir: str,
+                 start_with_full_file: bool, k_preferred: int, preferred_interval_sec: int,
+                 optimistic_interval_sec: int, self_id: int, all_peer_ids: set[int], file_name: str):
         self.total_pieces = total_pieces
         self.store = PieceStore(total_pieces, piece_size, last_piece_size, data_dir, start_full=start_with_full_file)
         self.local_bits: Bitfield = self.store.bitfield()
@@ -44,7 +35,7 @@ class PeerNode:
         self.optimistic_interval = optimistic_interval_sec
         self.logger = TextEventLogger(self_id=self_id)
         self.self_id = self_id
-        self._registry: Dict[int, NeighborState] = {}
+        self._registry: dict[int, NeighborState] = {}
 
         self.all_peers = all_peer_ids
         self.file_name = file_name
@@ -55,26 +46,23 @@ class PeerNode:
         self._all_done = asyncio.Event()
         self._check_global_completion()
 
-    async def wait_until_all_complete(self):
+    async def wait_until_all_complete(self) -> None:
         await self._all_done.wait()
 
     def mark_peer_complete(self, peer_id: int) -> None:
         self._complete_peers.add(peer_id)
         self._check_global_completion()
 
-    def _check_global_completion(self):
+    def _check_global_completion(self) -> None:
         if self._complete_peers == self.all_peers:
             self._all_done.set()
 
-    # ------- factory for the networking Connector -------
     def make_callbacks(self) -> PeerLogic:
         return PeerLogic(self)
 
-    # ------- registry & helpers -------
     def register_neighbor(self, logic: PeerLogic) -> None:
         assert logic.peer_id is not None
         self._registry[logic.peer_id] = NeighborState(logic.peer_id, logic)
-        # Send our bitfield (only once) if we haven't yet and have pieces.
 
         if logic.their_bits.count() == self.total_pieces:
             self._complete_peers.add(logic.peer_id)
@@ -83,13 +71,13 @@ class PeerNode:
         if not logic.sent_bitfield and self.local_bits.count() > 0 and logic.wire:
             logic.wire.send_bitfield(self.local_bits.to_bytes())
             logic._sent_bitfield = True
-        # Immediately compute interest toward them
+
         self.recompute_interest(logic)
 
     def on_disconnect(self, logic: PeerLogic) -> None:
         if logic.peer_id is None:
             return
-        # clear any inflight piece assigned to this neighbor
+
         self.requests.clear_inflight_for_peer(logic.peer_id)
         self._registry.pop(logic.peer_id, None)
 
@@ -100,15 +88,11 @@ class PeerNode:
     def neighbors(self) -> Iterable[NeighborState]:
         return list(self._registry.values())
 
-    # ------- interest / request -------
     def recompute_interest(self, logic: PeerLogic) -> None:
-        """Send interested/not interested based on whether neighbor has something we need."""
         if logic.wire is None or logic.peer_id is None:
             return
         missing = self.local_bits.missing_from(logic.their_bits)
         want = bool(missing)
-        # Track our interest flag on the logic side using the wire (no need to store duplicate)
-        # Idempotence: Networking tolerates duplicate sends, but we can be conservative if you track a flag.
         if want:
             logic.wire.send_interested()
         else:
@@ -121,7 +105,6 @@ class PeerNode:
             return
         idx = self.requests.choose_for_neighbor(logic.peer_id, logic.their_bits, self.local_bits)
         if idx is not None:
-            # Enforce correct size at PieceStore layer; the sender should send the right size
             logic.wire.send_request(idx)
             self.requests.mark_inflight(logic.peer_id, idx)
 
@@ -160,9 +143,8 @@ class PeerNode:
 
             self._check_global_completion()
 
-    # ------- choking timers -------
-    async def run_choking_loops(self):
-        async def preferred_loop():
+    async def run_choking_loops(self) -> None:
+        async def preferred_loop() -> None:
             while True:
                 await asyncio.sleep(self.preferred_interval)
                 interested = [ns.peer_id for ns in self.neighbors() if ns.logic.they_interested_in_us]
@@ -180,7 +162,7 @@ class PeerNode:
                         ns.logic.wire.send_choke()
                         ns.we_choke_them = True
 
-        async def optimistic_loop():
+        async def optimistic_loop() -> None:
             while True:
                 await asyncio.sleep(self.optimistic_interval)
                 choked_interested = [ns.peer_id for ns in self.neighbors()

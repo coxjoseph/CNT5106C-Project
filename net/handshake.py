@@ -6,7 +6,7 @@ class Handshake:
     __slots__ = ('peer_id',)
 
     def __init__(self, peer_id: int):
-        self.peer_id = int(peer_id)  # just in case
+        self.peer_id = int(peer_id)
 
     def encode(self) -> bytes:
         return HEADER + ZEROS + struct.pack('>I', self.peer_id)
@@ -20,6 +20,5 @@ class Handshake:
         if buf[18:28] != ZEROS:
             raise ValueError('Handshake padding not valid')
 
-        # Unpack last 4 bytes if the handshake is ok
         (peer_id,) = struct.unpack('>I', buf[28:])
         return Handshake(peer_id)

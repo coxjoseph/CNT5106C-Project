@@ -3,22 +3,20 @@ from typing import Optional
 from .constants import MessageType, MAX_FRAME
 
 
-# Frames: LEN(4B, big-endian) | TYPE(1B) | PAYLOAD(LEN-1)
 def encode_frame(msg_type: MessageType, payload: bytes = b'') -> bytes:
     if not isinstance(payload, (bytes, bytearray)):
-        raise TypeError("Payload isn't bytes-like - panic")
+        raise TypeError("Payload isn't bytes-like")
     length = 1 + len(payload)
     return struct.pack('>I', length) + struct.pack('>B', int(msg_type)) + payload
 
 
 def decode_one(buffer: bytearray) -> Optional[tuple[MessageType, bytes]]:
-    # no payload
     if len(buffer) < 4:
         return None
 
     (length,) = struct.unpack('>I', buffer[:4])
     if length <= 0 or length > MAX_FRAME:
-        raise ValueError(f'frame is a long boye, size {length}')
+        raise ValueError(f'Frame is too long: got size {length}')
 
     if len(buffer) < 4 + length:
         return None
@@ -30,17 +28,18 @@ def decode_one(buffer: bytearray) -> Optional[tuple[MessageType, bytes]]:
     return mtype, payload
 
 
-# Helpers
-def enc_have(index: int) -> bytes: return struct.pack('>I', index)
+def enc_have(index: int) -> bytes:
+    return struct.pack('>I', index)
 
 
 def dec_have(payload: bytes) -> int:
     if len(payload) != 4:
-        raise ValueError('Expected 4B in HAVE message')
+        raise ValueError(f'Expected 4B in HAVE message, got {len(payload)}')
     return struct.unpack('>I', payload)[0]
 
 
-def enc_request(index: int) -> bytes: return struct.pack('>I', index)
+def enc_request(index: int) -> bytes:
+    return struct.pack('>I', index)
 
 
 def dec_request(payload: bytes) -> int:
@@ -49,7 +48,8 @@ def dec_request(payload: bytes) -> int:
     return struct.unpack('>I', payload)[0]
 
 
-def enc_piece(index: int, data: bytes) -> bytes: return struct.pack('>I', index) + data
+def enc_piece(index: int, data: bytes) -> bytes:
+    return struct.pack('>I', index) + data
 
 
 def dec_piece(payload: bytes) -> tuple[int, bytes]:

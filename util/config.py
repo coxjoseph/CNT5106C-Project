@@ -12,7 +12,6 @@ class CommonConfig:
     file_size: int
     piece_size: int
 
-    # derived
     @property
     def total_pieces(self) -> int:
         return ceil(self.file_size / self.piece_size)
@@ -23,34 +22,34 @@ class CommonConfig:
         return rem if rem != 0 else self.piece_size
 
     @classmethod
-    def from_file(cls, path: str | Path) -> "CommonConfig":
+    def from_file(cls, path: str | Path) -> 'CommonConfig':
         path = Path(path)
         if not path.exists():
-            raise FileNotFoundError(f"Common.cfg not found: {path.resolve()}")
+            raise FileNotFoundError(f'Common.cfg not found: {path.resolve()}')
         config: dict[str, str] = {}
 
-        for raw in path.read_text(encoding="utf-8").splitlines():
+        for raw in path.read_text(encoding='utf-8').splitlines():
             line = raw.strip()
-            if not line or line.startswith("#"):
+            if not line or line.startswith('#'):
                 continue
             parts = line.split()
             if len(parts) < 2:
-                raise ValueError(f"Malformed Common.cfg line: {raw}")
+                raise ValueError(f'Malformed Common.cfg line: {raw}')
             key = parts[0]
-            val = " ".join(parts[1:]).strip()
+            val = ' '.join(parts[1:]).strip()
             config[key] = val
 
         try:
             return cls(
-                num_preferred_neighbors=int(config["NumberOfPreferredNeighbors"]),
-                unchoking_interval=int(config["UnchokingInterval"]),
-                optimistic_unchoking_interval=int(config["OptimisticUnchokingInterval"]),
-                file_name=config["FileName"],
-                file_size=int(config["FileSize"]),
-                piece_size=int(config["PieceSize"]),
+                num_preferred_neighbors=int(config['NumberOfPreferredNeighbors']),
+                unchoking_interval=int(config['UnchokingInterval']),
+                optimistic_unchoking_interval=int(config['OptimisticUnchokingInterval']),
+                file_name=config['FileName'],
+                file_size=int(config['FileSize']),
+                piece_size=int(config['PieceSize']),
             )
         except KeyError as e:
-            raise ValueError(f"Common.cfg missing key: {e}") from e
+            raise ValueError(f'Common.cfg missing key: {e}') from e
 
 
 @dataclass
@@ -58,7 +57,7 @@ class PeerRow:
     peer_id: int
     host: str
     port: int
-    has_file: int  # 1 or 0
+    has_file: int
 
 
 class PeerInfoTable:
@@ -71,19 +70,19 @@ class PeerInfoTable:
     def from_file(cls, path: str | Path):
         path = Path(path)
         if not path.exists():
-            raise FileNotFoundError(f"PeerInfo.cfg not found: {path.resolve()}")
+            raise FileNotFoundError(f'PeerInfo.cfg not found: {path.resolve()}')
         rows: list[PeerRow] = []
-        for raw in path.read_text(encoding="utf-8").splitlines():
+        for raw in path.read_text(encoding='utf-8').splitlines():
             line = raw.strip()
-            if not line or line.startswith("#"):
+            if not line or line.startswith('#'):
                 continue
             parts = line.split()
             if len(parts) != 4:
-                raise ValueError(f"Malformed PeerInfo.cfg line: {raw}")
+                raise ValueError(f'Malformed PeerInfo.cfg line: {raw}')
             pid, host, port, has_file = parts
             rows.append(PeerRow(int(pid), host, int(port), int(has_file)))
         if not rows:
-            raise ValueError("PeerInfo.cfg has no peers")
+            raise ValueError('PeerInfo.cfg has no peers')
         return cls(rows)
 
     def get(self, peer_id: int) -> PeerRow:

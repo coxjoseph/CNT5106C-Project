@@ -1,19 +1,15 @@
 import random
-from typing import Dict, Optional, Set
+from typing import Optional
 from .bitfield import Bitfield
 
 
 class RequestManager:
-    """
-    Enforces: one outstanding request per neighbor, no duplicate in-flight piece
-    across neighbors. Random piece selection (per spec).
-    """
 
     def __init__(self, total_pieces: int):
         self.total = total_pieces
-        self.inflight_piece_by_peer: Dict[int, int] = {}  # peer_id -> piece
-        self.inflight_peer_by_piece: Dict[int, int] = {}  # piece -> peer_id
-        self.completed: Set[int] = set()
+        self.inflight_piece_by_peer: dict[int, int] = {}  # peer_id -> piece
+        self.inflight_peer_by_piece: dict[int, int] = {}  # piece -> peer_id
+        self.completed: set[int] = set()
 
     def choose_for_neighbor(self, peer_id: int, neighbor_bits: Bitfield, local_bits: Bitfield) -> Optional[int]:
         # Don't assign if this neighbor already has an outstanding request

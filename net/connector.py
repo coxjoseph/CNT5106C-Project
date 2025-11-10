@@ -29,8 +29,6 @@ class Connector:
         self._connections: Set[PeerConnection] = set()
         self._closing = False
 
-    # ----------------------------- public API ------------------------------
-
     async def serve(self) -> None:
         self._server = await asyncio.start_server(self._on_client, self._listen_host, self._listen_port)
         async with self._server:
@@ -86,8 +84,6 @@ class Connector:
                 t.cancel()
         await asyncio.sleep(0)
 
-    # ---------------------------- internals --------------------------------
-
     async def _on_client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
         logic = self._logic_factory()
         if hasattr(logic, 'mark_outbound'):
@@ -103,7 +99,7 @@ class Connector:
             local_peer_id=self._local_peer_id,
             handshake_timeout=self._handshake_to,
         )
-        if hasattr(logic, "set_wire"):
+        if hasattr(logic, 'set_wire'):
             logic.set_wire(conn)
 
         self._connections.add(conn)
@@ -113,7 +109,6 @@ class Connector:
     async def _run_connection(self, conn: PeerConnection) -> None:
         try:
             await conn.start()
-            # keep task alive until the connection closes
             while True:
                 await asyncio.sleep(0.25)
         except asyncio.CancelledError:

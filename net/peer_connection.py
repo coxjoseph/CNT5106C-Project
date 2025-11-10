@@ -40,13 +40,12 @@ class PeerConnection(WireCommands):
         self.send_handshake(self._local_id)
 
         try:
-            remote = await asyncio.wait_for(self._r.readexactly(32), timeout=self._handshake_to)  # expect 32b handshake
+            remote = await asyncio.wait_for(self._r.readexactly(32), timeout=self._handshake_to)
         except (asyncio.IncompleteReadError, asyncio.TimeoutError, ConnectionError, OSError) as e:
             logger.warning(f'Handshake failed: {e}')
             self._safe_disconnect()
             return
 
-        # decode, break
         try:
             hs = Handshake.decode(remote)
             self.connected_peer_id = hs.peer_id
@@ -55,11 +54,10 @@ class PeerConnection(WireCommands):
             self._safe_disconnect()
             return
 
-        # run whatever happens on handshake
         try:
             self._cb.on_handshake(hs.peer_id)
         except (AttributeError, RuntimeError, TypeError) as e:
-            logger.error(f"Error running handshake callback for peer {hs.peer_id}: {e}")
+            logger.error(f'Error running handshake callback for peer {hs.peer_id}: {e}')
         self._read_task = asyncio.create_task(self._read_loop())
 
     async def _read_loop(self) -> None:
@@ -95,33 +93,36 @@ class PeerConnection(WireCommands):
 
     def _dispatch(self, mtype: MessageType, payload: bytes) -> None:
         try:
-            if mtype == MessageType.CHOKE:
-                self._cb.on_choke()
-            elif mtype == MessageType.UNCHOKE:
-                self._cb.on_unchoke()
-            elif mtype == MessageType.INTERESTED:
-                self._cb.on_interested()
-            elif mtype == MessageType.NOT_INTERESTED:
-                self._cb.on_not_interested()
-            elif mtype == MessageType.HAVE:
-                self._cb.on_have(dec_have(payload))
-            elif mtype == MessageType.BITFIELD:
-                self._cb.on_bitfield(payload)
-            elif mtype == MessageType.REQUEST:
-                self._cb.on_request(dec_request(payload))
-            elif mtype == MessageType.PIECE:
-                idx, data = dec_piece(payload)
-                self._cb.on_piece(idx, data)
-        except Exception:
-            pass
+            match mtype:
+                case MessageType.CHOKE:
+                    self._cb.on_choke()
+                case MessageType.UNCHOKE:
+                    self._cb.on_unchoke()
+                case MessageType.INTERESTED:
+                    self._cb.on_interested()
+                case MessageType.NOT_INTERESTED:
+                    self._cb.on_not_interested()
+                case MessageType.HAVE:
+                    self._cb.on_have(dec_have(payload))
+                case MessageType.BITFIELD:
+                    self._cb.on_bitfield(payload)
+                case MessageType.REQUEST:
+                    self._cb.on_request(dec_request(payload))
+                case MessageType.PIECE:
+                    idx, data = dec_piece(payload)
+                    self._cb.on_piece(idx, data)
+                case _:
+                    logger.warning(f'Unknown message type: {mtype}')
+        except (ValueError, AttributeError, RuntimeError, TypeError) as e:
+            logger.warning(f'Error dispatching message {mtype.name}: {e}')
 
-    # -- implementation of protocol --
     def send_handshake(self, peer_id: int) -> None:
         if self._closed:
             return
         try:
             self._w.write(Handshake(peer_id).encode())
-        except Exception:
+        except (OSError, ConnectionError, ValueError) as e:
+            logger.warning(f'Failed to send handshake to peer {peer_id}: {e}')
             self._safe_disconnect()
 
     def send_choke(self) -> None:
@@ -155,7 +156,6 @@ class PeerConnection(WireCommands):
     def close(self) -> None:
         self._safe_disconnect()
 
-    # helpers
     def _send_t(self, t: MessageType) -> None:
         if self._closed:
             return

@@ -19,7 +19,7 @@ class ChokingManager:
         self.k = k_preferred
         self.rates = RateTracker()
 
-    def select_preferred(self, interested_peer_ids: List[int], have_complete_file: bool) -> list[int]:
+    def select_preferred(self, interested_peer_ids: list[int], have_complete_file: bool) -> list[int]:
         if not interested_peer_ids:
             return []
         if have_complete_file:
@@ -39,5 +39,5 @@ class ChokingManager:
         return ordered[: self.k]
 
     @staticmethod
-    def pick_optimistic(choked_interested_ids: List[int]) -> int | None:
+    def pick_optimistic(choked_interested_ids: list[int]) -> int | None:
         return random.choice(choked_interested_ids) if choked_interested_ids else None
