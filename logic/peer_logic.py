@@ -1,7 +1,10 @@
 from typing import Optional
-from logic_stubs.callbacks import LogicCallbacks, WireCommands
+import logging
+from logic.callbacks import LogicCallbacks, WireCommands
 from .bitfield import Bitfield
-from net.protocol_logger import TextEventLogger
+
+
+logger = logging.getLogger(__name__)
 
 
 class PeerLogic(LogicCallbacks):
@@ -10,7 +13,6 @@ class PeerLogic(LogicCallbacks):
         self.wire: Optional[WireCommands] = None
         self.peer_id: Optional[int] = None
         self._outbound: bool = False
-        self._logger: TextEventLogger = node.logger
         self.their_bits: Bitfield = Bitfield.empty(node.total_pieces)
         self.they_choke_us: bool = True
         self.they_interested_in_us: bool = False
@@ -28,9 +30,9 @@ class PeerLogic(LogicCallbacks):
         self.peer_id = peer_id
 
         if self._outbound:
-            self._logger.makes_connection_to(peer_id)
+            logger.info(f'makes a connection to Peer [{remote_id}].')
         else:
-            self._logger.connected_from(peer_id)
+            logger.info(f'is connected from Peer [{peer_id}].')
 
         self.node.register_neighbor(self)
 
@@ -44,29 +46,29 @@ class PeerLogic(LogicCallbacks):
     def on_choke(self) -> None:
         self.they_choke_us = True
         if self.peer_id is not None:
-            self._logger.choked_by(self.peer_id)
+            logger.info(f'is choked by Peer [{self.peer_id}].')
             self.node.requests.clear_inflight_for_peer(self.peer_id)
 
     def on_unchoke(self) -> None:
         self.they_choke_us = False
         if self.peer_id is not None:
-            self._logger.unchoked_by(self.peer_id)
+            logger.info(f'is unchoked by Peer [{self.peer_id}].')
         self.node.maybe_request_next(self)
 
     def on_interested(self) -> None:
         self.they_interested_in_us = True
         if self.peer_id is not None:
-            self._logger.received_interested(self.peer_id)
+            logger.info(f"received the 'interested' message from Peer [{self.peer_id}].")
 
     def on_not_interested(self) -> None:
         self.they_interested_in_us = False
         if self.peer_id is not None:
-            self._logger.received_not_interested(self.peer_id)
+            logger.info(f"received the 'not interested' message from Peer [{self.peer_id}].")
 
     def on_have(self, index: int) -> None:
         self.their_bits.set(index, True)
         if self.peer_id is not None:
-            self._logger.received_have(self.peer_id, index)
+            logger.info(f"received the 'have' message from Peer [{self.peer_id}] for the piece [{index}].")
         if self.their_bits.count() == self.node.total_pieces and self.peer_id is not None:
             self.node.mark_peer_complete(self.peer_id)
         self.node.recompute_interest(self)

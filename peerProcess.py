@@ -3,6 +3,8 @@ import argparse
 import asyncio
 import os
 from pathlib import Path
+import logging
+from util.logging_config import configure_logging
 
 from net.connector import Connector
 from logic.peer_node import PeerNode
@@ -14,6 +16,8 @@ async def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument('peer_id', type=int)
     args = ap.parse_args()
+
+    configure_logging(args.peer_id, to_console=False)
 
     common = CommonConfig.from_file('Common.cfg')
     peers = PeerInfoTable.from_file('PeerInfo.cfg')

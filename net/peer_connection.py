@@ -10,7 +10,7 @@ from .codec import (
     enc_piece, dec_piece
 )
 
-from logic_stubs.callbacks import WireCommands, LogicCallbacks
+from logic.callbacks import WireCommands, LogicCallbacks
 
 logger = logging.getLogger(__name__)
 

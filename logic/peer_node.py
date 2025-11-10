@@ -6,8 +6,7 @@ from .piece_store import PieceStore
 from .request_manager import RequestManager
 from .choking_manager import ChokingManager
 from .peer_logic import PeerLogic
-from net.protocol_logger import TextEventLogger
-import erro
+import errno
 import logging
 
 logger = logging.getLogger(__name__)
@@ -33,7 +32,6 @@ class PeerNode:
         self.choking = ChokingManager(k_preferred)
         self.preferred_interval = preferred_interval_sec
         self.optimistic_interval = optimistic_interval_sec
-        self.logger = TextEventLogger(self_id=self_id)
         self.self_id = self_id
         self._registry: dict[int, NeighborState] = {}
 
@@ -116,19 +114,19 @@ class PeerNode:
 
         have_cnt = self.local_bits.count()
         if logic.peer_id is not None:
-            self.logger.downloaded_piece_from(logic.peer_id, index, have_cnt)
+            logger.info(f" has downloaded the piece [{index}] from Peer [{logic.peer_id}]. "
+                        f"Now the number of pieces it has is [{have_cnt}].")
 
         for ns in self.neighbors():
             if ns.logic.wire:
                 ns.logic.wire.send_have(index)
 
-        # recompute interest, request again
         for ns in self.neighbors():
             self.recompute_interest(ns.logic)
         self.maybe_request_next(logic)
 
         if have_cnt == self.total_pieces:
-            self.logger.downloaded_complete_file()
+            logger.info(f' has downloaded the complete file')
             self._complete_peers.add(self.self_id)
             try:
                 self.store.reconstruct_full_file(self.file_name)
@@ -138,8 +136,6 @@ class PeerNode:
             except OSError as e:
                 if e.errno in (errno.EEXIST, errno.ENOTDIR):
                     logger.warning(f'Failed to reconstruct {self.file_name}: {e}')
-            else:
-                raise
 
             self._check_global_completion()
 
@@ -149,7 +145,7 @@ class PeerNode:
                 await asyncio.sleep(self.preferred_interval)
                 interested = [ns.peer_id for ns in self.neighbors() if ns.logic.they_interested_in_us]
                 selected = self.choking.select_preferred(interested, self.local_bits.count() == self.total_pieces)
-                self.logger.preferred_neighbors(selected)
+                logger.info(f'has the preferred neighbors [{", ".join(str(p) for p in selected) if selected else ""}]')
                 selected_set = set(selected)
 
                 for ns in self.neighbors():
@@ -170,7 +166,7 @@ class PeerNode:
                 pick = self.choking.pick_optimistic(choked_interested)
                 if pick is None:
                     continue
-                self.logger.optimistic_pick(pick)
+                logger.info(f'has the optimistically unchoked neighbor [{pick}]')
                 ns = self._registry.get(pick)
                 if ns and ns.logic.wire and ns.we_choke_them:
                     ns.logic.wire.send_unchoke()

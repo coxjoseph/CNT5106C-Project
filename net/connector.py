@@ -2,7 +2,7 @@ import asyncio
 import logging
 from typing import Callable, Optional, Set
 
-from logic_stubs.callbacks import LogicCallbacks
+from logic.callbacks import LogicCallbacks
 from .peer_connection import PeerConnection
 
 logger = logging.getLogger(__name__)
