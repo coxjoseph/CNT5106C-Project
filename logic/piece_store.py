@@ -62,3 +62,7 @@ class PieceStore:
                 p.unlink()
             except FileNotFoundError:
                 pass
+        try:
+            os.rmdir(self.dir)
+        except FileNotFoundError:
+            pass

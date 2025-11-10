@@ -17,7 +17,7 @@ async def main() -> None:
     ap.add_argument('peer_id', type=int)
     args = ap.parse_args()
 
-    configure_logging(args.peer_id, to_console=False)
+    configure_logging(args.peer_id, to_console=True, log_dir='.')
 
     common = CommonConfig.from_file('Common.cfg')
     peers = PeerInfoTable.from_file('PeerInfo.cfg')
@@ -66,7 +66,6 @@ async def main() -> None:
     node.connector = connector
 
     _ = asyncio.create_task(connector.serve())
-
     for row in peers.earlier_peers(args.peer_id):
         _ = asyncio.create_task(connector.connect_with_retry(row.host, row.port))
 
@@ -94,6 +93,7 @@ async def slice_into_pieces(src_path: Path, out_dir: Path, piece_size: int, tota
             raise ValueError(f'Source file too small for piece {i} (expected {size}, got {len(chunk)})')
         (out_dir / f'piece_{i:06d}.bin').write_bytes(chunk)
         offset += size
+    print('sliced n diced')
 
 
 if __name__ == '__main__':
