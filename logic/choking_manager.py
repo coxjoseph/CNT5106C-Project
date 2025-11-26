@@ -30,7 +30,7 @@ class ChokingManager:
         ordered = sorted(interested_peer_ids, key=lambda pid: snap.get(pid, 0), reverse=True)
         # break ties randomly among peers with equal rate
         i = 0
-        while i < len(ordered):
+        while i < self.k:
             j = i + 1
             while j < len(ordered) and snap.get(ordered[j], 0) == snap.get(ordered[i], 0):
                 j += 1
