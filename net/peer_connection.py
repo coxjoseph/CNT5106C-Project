@@ -84,7 +84,7 @@ class PeerConnection(WireCommands):
                     mtype, payload = res
                     try:
                         self._dispatch(mtype, payload)
-                    except (ValueError, RuntimeErrorm, TypeError) as e:
+                    except (ValueError, RuntimeError, TypeError) as e:
                         logger.warning(f'Error dispatching message: {e}')
         except asyncio.CancelledError as e:
             logger.debug(f'Read loop cancelled: {e}')
