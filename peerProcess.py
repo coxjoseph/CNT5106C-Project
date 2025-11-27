@@ -93,7 +93,6 @@ async def slice_into_pieces(src_path: Path, out_dir: Path, piece_size: int, tota
             raise ValueError(f'Source file too small for piece {i} (expected {size}, got {len(chunk)})')
         (out_dir / f'piece_{i:06d}.bin').write_bytes(chunk)
         offset += size
-    print('sliced n diced')
 
 
 if __name__ == '__main__':
