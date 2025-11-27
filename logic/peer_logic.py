@@ -30,7 +30,7 @@ class PeerLogic(LogicCallbacks):
         self.peer_id = peer_id
 
         if self._outbound:
-            logger.info(f'makes a connection to Peer [{remote_id}].')
+            logger.info(f'makes a connection to Peer [{peer_id}].')
         else:
             logger.info(f'is connected from Peer [{peer_id}].')
 
@@ -70,11 +70,14 @@ class PeerLogic(LogicCallbacks):
         if self.peer_id is not None:
             logger.info(f"received the 'have' message from Peer [{self.peer_id}] for the piece [{index}].")
         if self.their_bits.count() == self.node.total_pieces and self.peer_id is not None:
+            logger.info(f"believes that [{self.peer_id}] is finished.")
             self.node.mark_peer_complete(self.peer_id)
         self.node.recompute_interest(self)
 
     def on_bitfield(self, bits: bytes) -> None:
         self.their_bits = Bitfield.from_bytes(self.node.total_pieces, bits)
+        if self.peer_id is not None:
+            logger.info(f"received the 'bitfield' message from Peer [{self.peer_id}].")
         if self.their_bits.count() == self.node.total_pieces and self.peer_id is not None:
             self.node.mark_peer_complete(self.peer_id)
         self.node.recompute_interest(self)
@@ -82,12 +85,15 @@ class PeerLogic(LogicCallbacks):
     def on_request(self, index: int) -> None:
         if self.peer_id is None or self.wire is None or self.node.we_choke_them(self.peer_id):
             return
+        if self.peer_id is not None:
+            logger.info(f"received the 'request' message from Peer [{self.peer_id}] for the piece [{index}].")
         if self.node.store.have(index):
             data = self.node.store.read_piece(index)
             self.wire.send_piece(index, data)
 
     def on_piece(self, index: int, data: bytes) -> None:
         if self.peer_id is not None:
+            logger.info(f"received the 'piece' message from Peer [{self.peer_id}] for the piece [{index}].")
             self.node.choking.rates.add_download(self.peer_id, len(data))
         self.node.handle_piece(self, index, data)
 
