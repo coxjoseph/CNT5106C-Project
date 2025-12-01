@@ -24,6 +24,9 @@ class PeerNode:
     def __init__(self, total_pieces: int, piece_size: int, last_piece_size: int, data_dir: str,
                  start_with_full_file: bool, k_preferred: int, preferred_interval_sec: int,
                  optimistic_interval_sec: int, self_id: int, all_peer_ids: set[int], file_name: str):
+
+        logger.log(f" starts process with k={k_preferred}, p={preferred_interval_sec}, m={optimistic_interval_sec}")
+
         self.total_pieces = total_pieces
         self.store = PieceStore(total_pieces, piece_size, last_piece_size, data_dir, start_full=start_with_full_file)
         self.local_bits: Bitfield = self.store.bitfield()
