@@ -31,6 +31,8 @@ class PeerNode:
         self.store = PieceStore(total_pieces, piece_size, last_piece_size, data_dir, start_full=start_with_full_file)
         self.local_bits: Bitfield = self.store.bitfield()
 
+        logger.info(f"has bitfield {self.local_bits}")
+
         self.requests = RequestManager(total_pieces)
         self.choking = ChokingManager(k_preferred)
         self.preferred_interval = preferred_interval_sec
@@ -129,7 +131,7 @@ class PeerNode:
         self.maybe_request_next(logic)
 
         if have_cnt == self.total_pieces:
-            logger.info(f' has downloaded the complete file')
+            logger.info(f'has downloaded the complete file')
             self._complete_peers.add(self.self_id)
             try:
                 self.store.reconstruct_full_file(self.file_name)

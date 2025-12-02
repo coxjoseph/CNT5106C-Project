@@ -69,6 +69,7 @@ class PeerLogic(LogicCallbacks):
         self.their_bits.set(index, True)
         if self.peer_id is not None:
             logger.info(f"received the 'have' message from Peer [{self.peer_id}] for the piece [{index}].")
+        logger.info(f"now has the following bitfield for [{self.peer_id}]: {self.their_bits}")
         if self.their_bits.count() == self.node.total_pieces and self.peer_id is not None:
             logger.info(f"believes that [{self.peer_id}] is finished.")
             self.node.mark_peer_complete(self.peer_id)

@@ -49,6 +49,7 @@ class PeerConnection(WireCommands):
         try:
             hs = Handshake.decode(remote)
             self.connected_peer_id = hs.peer_id
+            logger.info(f"receives handshake from peer [{self.connected_peer_id}]")
         except (ValueError, OSError) as e:
             logger.warning(f'Failed to decode handshake: {e}')
             self._safe_disconnect()
@@ -121,34 +122,43 @@ class PeerConnection(WireCommands):
             return
         try:
             self._w.write(Handshake(peer_id).encode())
+            logger.info(f"sends handshake to peer [{self.connected_peer_id}]")
         except (OSError, ConnectionError, ValueError) as e:
             logger.warning(f'Failed to send handshake to peer {peer_id}: {e}')
             self._safe_disconnect()
 
     def send_choke(self) -> None:
+        logger.info(f"sends 'choke' to peer [{self.connected_peer_id}]")
         self._send_t(MessageType.CHOKE)
 
     def send_unchoke(self) -> None:
+        logger.info(f"sends 'unchoke' to peer [{self.connected_peer_id}]")
         self._send_t(MessageType.UNCHOKE)
 
     def send_interested(self) -> None:
+        logger.info(f"sends 'interested' to peer [{self.connected_peer_id}]")
         self._send_t(MessageType.INTERESTED)
 
     def send_not_interested(self) -> None:
+        logger.info(f"sends not 'interested' to peer [{self.connected_peer_id}]")
         self._send_t(MessageType.NOT_INTERESTED)
 
     def send_have(self, index: int) -> None:
+        logger.info(f"sends 'have' for piece {index} to peer [{self.connected_peer_id}]")
         self._send_tp(MessageType.HAVE, enc_have(index))
 
     def send_bitfield(self, bits: bytes) -> None:
+        logger.info(f"sends 'bitfield' to peer [{self.connected_peer_id}]")
         if not isinstance(bits, (bytes, bytearray)):
             raise TypeError('bitfield must be bytes')
         self._send_tp(MessageType.BITFIELD, bytes(bits))
 
     def send_request(self, index: int) -> None:
+        logger.info(f"sends 'request' for piece {index} to peer [{self.connected_peer_id}]")
         self._send_tp(MessageType.REQUEST, enc_request(index))
 
     def send_piece(self, index: int, data: bytes) -> None:
+        logger.info(f"sends 'piece' with number {index} to peer [{self.connected_peer_id}]")
         if not isinstance(data, (bytes, bytearray)):
             raise TypeError('piece data must be bytes')
         self._send_tp(MessageType.PIECE, enc_piece(index, bytes(data)))
