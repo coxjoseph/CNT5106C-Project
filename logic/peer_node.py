@@ -25,7 +25,7 @@ class PeerNode:
                  start_with_full_file: bool, k_preferred: int, preferred_interval_sec: int,
                  optimistic_interval_sec: int, self_id: int, all_peer_ids: set[int], file_name: str):
 
-        logger.info(f" starts process with k={k_preferred}, p={preferred_interval_sec}, m={optimistic_interval_sec}")
+        logger.info(f"starts process with k={k_preferred}, p={preferred_interval_sec}, m={optimistic_interval_sec}")
 
         self.total_pieces = total_pieces
         self.store = PieceStore(total_pieces, piece_size, last_piece_size, data_dir, start_full=start_with_full_file)
@@ -49,6 +49,7 @@ class PeerNode:
 
     async def wait_until_all_complete(self) -> None:
         await self._all_done.wait()
+        logger.info("is closing...")
 
     def mark_peer_complete(self, peer_id: int) -> None:
         self._complete_peers.add(peer_id)
@@ -57,6 +58,7 @@ class PeerNode:
     def _check_global_completion(self) -> None:
         if self._complete_peers == self.all_peers:
             self._all_done.set()
+            logger.info("believes all peers are complete.")
 
     def make_callbacks(self) -> PeerLogic:
         return PeerLogic(self)
@@ -72,8 +74,6 @@ class PeerNode:
         if not logic.sent_bitfield and self.local_bits.count() > 0 and logic.wire:
             logic.wire.send_bitfield(self.local_bits.to_bytes())
             logic._sent_bitfield = True
-
-        self.recompute_interest(logic)
 
     def on_disconnect(self, logic: PeerLogic) -> None:
         if logic.peer_id is None:
@@ -117,7 +117,7 @@ class PeerNode:
 
         have_cnt = self.local_bits.count()
         if logic.peer_id is not None:
-            logger.info(f" has downloaded the piece [{index}] from Peer [{logic.peer_id}]. "
+            logger.info(f"has downloaded the piece [{index}] from Peer [{logic.peer_id}]. "
                         f"Now the number of pieces it has is [{have_cnt}].")
 
         for ns in self.neighbors():
