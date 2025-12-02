@@ -186,6 +186,7 @@ class PeerConnection(WireCommands):
         self._closed = True
         try:
             self._w.close()
+            logger.info(f"has closed the connection to peer [{self.connected_peer_id}]")
         except OSError as e:
             logger.warning(f'Error while closing writer: {e}')
         try:
