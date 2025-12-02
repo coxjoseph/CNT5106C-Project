@@ -30,7 +30,9 @@ class Connector:
         self._closing = False
 
     async def serve(self) -> None:
-        self._server = await asyncio.start_server(self._on_client, self._listen_host, self._listen_port)
+        bind_host = "0.0.0.0"
+        logger.info(f"Listening on {self._listen_host}:{self._listen_port}")
+        self._server = await asyncio.start_server(self._on_client, bind_host, self._listen_port)
         async with self._server:
             await self._server.serve_forever()
 
